@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -213,12 +213,52 @@ const BotSelection: React.FC = () => {
   const [user] = useAtom(userAtom);
   const [error, setError] = useState<string | null>(null);
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
+  const [topicError, setTopicError] = useState<string | null>(null);
+  const [botError, setBotError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const navigate = useNavigate();
+
+  const TOPIC_MAX_LENGTH = 200;
 
   const effectiveTopic = topic === "custom" ? customTopic : topic;
   const selectedBotObj = selectedBot
     ? allBots.find((b) => b.name === selectedBot)
     : null;
+
+  // Validate custom topic
+  const validateCustomTopic = (value: string) => {
+    if (topic === "custom") {
+      if (value.trim() === "") {
+        setTopicError("Please enter a topic");
+        return false;
+      } else if (value.length > TOPIC_MAX_LENGTH) {
+        setTopicError(`Topic must be ${TOPIC_MAX_LENGTH} characters or less`);
+        return false;
+      } else {
+        setTopicError(null);
+        return true;
+      }
+    }
+    return true;
+  };
+
+  // Handle custom topic change with validation
+  const handleCustomTopicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value.length <= TOPIC_MAX_LENGTH) {
+      setCustomTopic(value);
+      if (value.trim() !== "") {
+        setTopicError(null);
+      }
+    }
+  };
+
+  // Handle bot selection with validation
+  const handleBotSelection = (botName: string) => {
+    setSelectedBot(botName);
+    setBotError(null);
+  };
 
   // Difficulty levels with counts, sorted by difficulty
   const levels = [
@@ -259,15 +299,68 @@ const BotSelection: React.FC = () => {
     setExpandedLevel(expandedLevel === level ? null : level);
   };
 
+  // Load saved form state on component mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('botSelectionState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setSelectedBot(parsed.selectedBot);
+        setTopic(parsed.topic);
+        setCustomTopic(parsed.customTopic || "");
+        setStance(parsed.stance);
+        setPhaseTimings(parsed.phaseTimings || defaultPhaseTimings);
+      } catch (error) {
+        console.error('Failed to load saved state:', error);
+      }
+    }
+  }, []);
+
+  // Save form state to localStorage whenever it changes
+  useEffect(() => {
+    const stateToSave = {
+      selectedBot,
+      topic,
+      customTopic,
+      stance,
+      phaseTimings
+    };
+    localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
+  }, [selectedBot, topic, customTopic, stance, phaseTimings]);
+
   const startDebate = async () => {
-    if (!selectedBot || !effectiveTopic) {
-      setError("Please select a bot and a topic");
+    // Prevent double-clicks
+    if (isCreating) return;
+    setIsCreating(true);
+
+    // Clear previous errors
+    setError(null);
+    setTopicError(null);
+    setBotError(null);
+
+    // Validate bot selection
+    if (!selectedBot) {
+      setBotError("Please select a bot");
+      setIsCreating(false);
+      return;
+    }
+
+    // Validate topic
+    if (!effectiveTopic || effectiveTopic.trim() === "") {
+      setTopicError("Please enter a topic");
+      setIsCreating(false);
+      return;
+    }
+
+    if (!validateCustomTopic(customTopic)) {
+      setIsCreating(false);
       return;
     }
 
     const bot = allBots.find((b) => b.name === selectedBot);
     if (!bot) {
       setError("Selected bot not found");
+      setIsCreating(false);
       return;
     }
 
@@ -287,6 +380,13 @@ const BotSelection: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await createDebate(debatePayload);
+      
+      // Show success toast
+      setShowSuccess(true);
+      
+      // Clear localStorage after successful creation
+      localStorage.removeItem('botSelectionState');
+      
       const state = {
         ...data,
         phaseTimings,
@@ -296,17 +396,27 @@ const BotSelection: React.FC = () => {
         botLevel: bot.level,
         topic: effectiveTopic,
       };
-      navigate(`/debate/${data.debateId}`, { state });
+      
+      // Navigate after brief delay to show success message
+      setTimeout(() => {
+        navigate(`/debate/${data.debateId}`, { state });
+      }, 1000);
     } catch (error) {
       setError("Failed to start debate");
     } finally {
       setIsLoading(false);
+      setIsCreating(false);
     }
   };
 
   return (
     <>
       {isLoading && <Loader />}
+      {showSuccess && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse">
+          Debate created successfully! Topic: "{effectiveTopic}"
+        </div>
+      )}
       <div className="bg-gradient-to-br from-background via-accent/10 to-background p-4">
         {/* Header Section */}
         <div className="text-center mb-6">
@@ -358,6 +468,9 @@ const BotSelection: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                {botError && (
+                  <p className="text-red-500 text-xs mt-2">{botError}</p>
+                )}
               </div>
             )}
 
@@ -396,7 +509,7 @@ const BotSelection: React.FC = () => {
                         .map((bot) => (
                           <div
                             key={bot.name}
-                            onClick={() => setSelectedBot(bot.name)}
+                            onClick={() => handleBotSelection(bot.name)}
                             className={`relative flex flex-col items-center p-2 rounded-md border transition-colors cursor-pointer group ${
                               selectedBot === bot.name
                                 ? "border-2 border-primary bg-primary/10"
@@ -463,14 +576,28 @@ const BotSelection: React.FC = () => {
                     </SelectContent>
                   </Select>
                   {topic === "custom" && (
-                    <Input
-                      value={customTopic}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setCustomTopic(e.target.value)
-                      }
-                      placeholder="Enter your custom topic"
-                      className="mt-2 bg-background text-foreground border-border"
-                    />
+                    <div>
+                      <Input
+                        value={customTopic}
+                        onChange={handleCustomTopicChange}
+                        onBlur={() => validateCustomTopic(customTopic)}
+                        placeholder="Enter your custom topic"
+                        maxLength={TOPIC_MAX_LENGTH}
+                        className={`mt-2 bg-background text-foreground border-border ${
+                          topicError ? "border-red-500" : ""
+                        }`}
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        {topicError && (
+                          <p className="text-red-500 text-xs">{topicError}</p>
+                        )}
+                        <span className={`text-xs text-muted-foreground ${
+                          topicError ? "ml-auto" : ""
+                        }`}>
+                          {customTopic.length}/{TOPIC_MAX_LENGTH}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -523,7 +650,7 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={!selectedBot || !effectiveTopic || isLoading}
+                disabled={!selectedBot || !effectiveTopic || effectiveTopic.trim() === "" || topicError || isLoading || isCreating}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
                 Start Debate 🚀
