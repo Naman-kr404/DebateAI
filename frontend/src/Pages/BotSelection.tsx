@@ -169,6 +169,9 @@ const defaultPhaseTimings: { name: string; time: number }[] = [
   { name: "Closing Statements", time: 180 },
 ];
 
+// Maximum length for custom topics
+const MAX_TOPIC_LENGTH = 200;
+
 // Loader component
 const Loader: React.FC = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
@@ -181,6 +184,18 @@ const Loader: React.FC = () => (
     </div>
   </div>
 );
+
+const isValidPhaseTimings = (
+  value: unknown
+): value is { name: string; time: number }[] =>
+  Array.isArray(value) &&
+  value.every(
+    (p) =>
+      p &&
+      typeof p === "object" &&
+      typeof (p as { name?: unknown }).name === "string" &&
+      Number.isFinite((p as { time?: unknown }).time)
+  );
 
 const BotSelection: React.FC = () => {
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
@@ -202,17 +217,22 @@ const BotSelection: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipInitialPersistRef = useRef(true);
+  const preventPersistRef = useRef(false);
 
   useEffect(() => {
     const savedState = localStorage.getItem('botSelectionState');
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
-        setSelectedBot(parsed.selectedBot ?? null);
-        setTopic(parsed.topic ?? "custom");
-        setCustomTopic(parsed.customTopic ?? "");
-        setStance(parsed.stance ?? "random");
-        setPhaseTimings(parsed.phaseTimings ?? defaultPhaseTimings);
+        setSelectedBot(typeof parsed.selectedBot === "string" ? parsed.selectedBot : null);
+        setTopic(typeof parsed.topic === "string" ? parsed.topic : "custom");
+        setCustomTopic(typeof parsed.customTopic === "string" ? parsed.customTopic : "");
+        setStance(typeof parsed.stance === "string" ? parsed.stance : "random");
+        setPhaseTimings(
+          isValidPhaseTimings(parsed.phaseTimings)
+            ? parsed.phaseTimings
+            : defaultPhaseTimings
+        );
       } catch (error) {
         console.error('Failed to load saved state:', error);
       }
@@ -224,6 +244,7 @@ const BotSelection: React.FC = () => {
       skipInitialPersistRef.current = false;
       return;
     }
+    if (preventPersistRef.current) return;
     const stateToSave = {
       selectedBot,
       topic,
@@ -301,6 +322,9 @@ const BotSelection: React.FC = () => {
     if (!effectiveTopic.trim()) {
       newErrors.topic = "Please select or enter a topic";
       isValid = false;
+    } else if (effectiveTopic.trim().length > MAX_TOPIC_LENGTH) {
+      newErrors.topic = `Topic must be ${MAX_TOPIC_LENGTH} characters or fewer`;
+      isValid = false;
     }
 
     const invalidTiming = phaseTimings.some((p) => p.time < 60 || p.time > 600);
@@ -337,6 +361,7 @@ const BotSelection: React.FC = () => {
       const data = await createDebate(debatePayload);
       setShowSuccess(true);
       localStorage.removeItem('botSelectionState');
+      preventPersistRef.current = true;
       const state = {
         ...data,
         phaseTimings,
@@ -551,6 +576,7 @@ const BotSelection: React.FC = () => {
                         setCustomTopic(e.target.value);
                         setFieldErrors((prev) => ({ ...prev, topic: undefined }));
                       }}
+                      maxLength={MAX_TOPIC_LENGTH}
                       placeholder="Enter your custom topic"
                       className="mt-2 bg-background text-foreground border-border"
                     />
