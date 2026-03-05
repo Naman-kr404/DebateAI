@@ -202,8 +202,9 @@ const BotSelection: React.FC = () => {
   const [topic, setTopic] = useState<string>("custom");
   const [customTopic, setCustomTopic] = useState<string>("");
   const [stance, setStance] = useState<string>("random");
-  const [phaseTimings, setPhaseTimings] =
-    useState<{ name: string; time: number }[]>(defaultPhaseTimings);
+  const [phaseTimings, setPhaseTimings] = useState<{ name: string; time: number }[]>(
+    () => defaultPhaseTimings.map((p) => ({ ...p }))
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [user] = useAtom(userAtom);
@@ -230,8 +231,8 @@ const BotSelection: React.FC = () => {
         setStance(typeof parsed.stance === "string" ? parsed.stance : "random");
         setPhaseTimings(
           isValidPhaseTimings(parsed.phaseTimings)
-            ? parsed.phaseTimings
-            : defaultPhaseTimings
+            ? parsed.phaseTimings.map((p: any) => ({ ...p }))
+            : defaultPhaseTimings.map((p) => ({ ...p }))
         );
       } catch (error) {
         console.error('Failed to load saved state:', error);
@@ -295,13 +296,15 @@ const BotSelection: React.FC = () => {
 
   // Update phase timing ensuring the value is within the allowed range
   const updatePhaseTiming = (phaseIndex: number, value: string) => {
-    const newTimings = [...phaseTimings];
     // Allow typing freely; validation happens on submit or via inline warnings
     const parsedValue = value === "" ? 0 : parseInt(value, 10);
     const timeInSeconds = isNaN(parsedValue) ? 0 : parsedValue;
 
-    newTimings[phaseIndex].time = timeInSeconds;
-    setPhaseTimings(newTimings);
+    setPhaseTimings((prev) =>
+      prev.map((phase, idx) =>
+        idx === phaseIndex ? { ...phase, time: timeInSeconds } : phase
+      )
+    );
     if (fieldErrors.timings) setFieldErrors((prev) => ({ ...prev, timings: undefined }));
   };
 
@@ -635,7 +638,14 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={isLoading || isCreating}
+                disabled={
+                  isLoading ||
+                  isCreating ||
+                  !selectedBot ||
+                  !effectiveTopic.trim() ||
+                  effectiveTopic.trim().length > MAX_TOPIC_LENGTH ||
+                  phaseTimings.some((p) => p.time < 60 || p.time > 600)
+                }
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
                 {isLoading || isCreating ? 'Creating Debate...' : 'Start Debate 🚀'}
