@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
+// import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
 import { sendDebateMessage, judgeDebate, concedeDebate } from "@/services/vsbot";
 import JudgmentPopup from "@/components/JudgementPopup";
 import { Mic, MicOff } from "lucide-react";
@@ -677,7 +678,16 @@ const DebateRoom: React.FC = () => {
             <span className="text-xs text-gray-500 block mb-1">
               {msg.phase}
             </span>
-            {msg.text}
+            {/* {msg.text} */}
+            {msg.text.includes("- ") ? (
+  <ul className="list-disc pl-5 space-y-1">
+    {msg.text.split(/\n|-\s+/).filter(Boolean).map((point, i) => (
+      <li key={i}>{point.trim()}</li>
+    ))}
+  </ul>
+) : (
+  <div className="whitespace-pre-line">{msg.text}</div>
+)}
           </div>
         ))}
         <div ref={messagesEndRef} />
