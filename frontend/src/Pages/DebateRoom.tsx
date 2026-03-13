@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
-// import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
+import { Input } from "../components/ui/input";
 import { sendDebateMessage, judgeDebate, concedeDebate } from "@/services/vsbot";
 import JudgmentPopup from "@/components/JudgementPopup";
 import { Mic, MicOff } from "lucide-react";
@@ -680,7 +679,7 @@ const DebateRoom: React.FC = () => {
             </span>
             {/* {msg.text} */}
             {msg.text.includes("- ") ? (
-  <ul className="list-disc pl-5 space-y-1">
+  <ul className="list-disc pl-5 space-y-4">
     {msg.text.split(/\n|-\s+/).filter(Boolean).map((point, i) => (
       <li key={i}>{point.trim()}</li>
     ))}

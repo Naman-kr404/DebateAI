@@ -169,20 +169,20 @@ Your responses must reflect this persona consistently, as if you are the charact
 		limitInstruction = fmt.Sprintf("Limit your response to %d words.", maxWords)
 	}
 
-	pointInstruction := `
-STRICT OUTPUT FORMAT:
-- Write ONLY bullet points.
-- Each bullet point MUST start with "- ".
-- Each bullet MUST be on a NEW LINE.
-- Do NOT place multiple bullets on the same line.
-- Maximum 5 bullets.
+	// pointInstruction := `
+// STRICT OUTPUT FORMAT:
+// - Write ONLY bullet points.
+// - Each bullet point MUST start with "- ".
+// - Each bullet MUST be on a NEW LINE.
+// - Do NOT place multiple bullets on the same line.
+// - Maximum 5 bullets.
 
-Correct format example:
-- First argument supporting your stance
-- Second argument responding to the opponent
-- Third argument with reasoning
-- Fourth argument strengthening your case
-`
+// Correct format example:
+// - First argument supporting your stance
+// - Second argument responding to the opponent
+// - Third argument with reasoning
+// - Fourth argument strengthening your case
+// `
 
 	// Base instruction for all responses
 	baseInstruction := "Provide only your own argument without simulating an opponent’s dialogue. " +
@@ -200,7 +200,7 @@ Your debating style must strictly adhere to the following guidelines:
 Your stance is: %s.
 %s
 %s
-%s
+// %s
 %s
 Provide an opening statement that embodies your persona and stance in bullet points.
 [Your opening argument]
@@ -217,7 +217,7 @@ Provide an opening statement that embodies your persona and stance in bullet poi
 				return ""
 			}(),
 			phaseInstruction,
-			pointInstruction,
+			// pointInstruction,
 			limitInstruction, baseInstruction,
 		)
 	}
@@ -257,7 +257,7 @@ Your debating style must strictly adhere to the following guidelines:
 Your stance is: %s.
 %s
 %s
-%s
+// %s
 Based on the debate transcript below, continue the discussion in the %s phase by responding directly to the user’s message.
 User’s message: "%s"
 %s
@@ -276,7 +276,7 @@ Please provide your full argument.`,
 			return ""
 		}(),
 		phaseInstruction,
-		pointInstruction,
+		// pointInstruction,
 		currentPhase,
 		userText,
 		limitInstruction+" "+baseInstruction,
