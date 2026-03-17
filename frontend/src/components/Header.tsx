@@ -23,6 +23,10 @@ import debateAiLogo from "@/assets/aossie.png";
 import avatarImage from "@/assets/avatar2.jpg";
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, Notification } from "@/services/notificationService";
 
+/**
+ * Header component providing breadcrumb navigation, notifications, 
+ * and user profile management.
+ */
 function Header() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const location = useLocation();
@@ -82,6 +86,10 @@ function Header() {
     setUnreadCount(0);
   };
 
+  /**
+   * Generates breadcrumb navigation based on the current URL path.
+   * @returns {JSX.Element} The breadcrumb component.
+   */
   const getBreadcrumbs = () => {
     const pathnames = location.pathname.split("/").filter((x) => x);
     return (
@@ -101,12 +109,20 @@ function Header() {
                 <BreadcrumbItem>
                   {isLast ? (
                     <BreadcrumbPage className="capitalize">
-                      {value.replace("-", " ")}
+                      {value === "support-debateai" 
+                        ? "Support DebateAI" 
+                        : value === "bot-selection" 
+                        ? "Bot Selection" 
+                        : value.replace("-", " ")}
                     </BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink asChild>
                       <NavLink to={to} className="capitalize">
-                        {value.replace("-", " ")}
+                        {value === "support-debateai" 
+                          ? "Support DebateAI" 
+                          : value === "bot-selection" 
+                          ? "Bot Selection" 
+                          : value.replace("-", " ")}
                       </NavLink>
                     </BreadcrumbLink>
                   )}
@@ -282,7 +298,7 @@ function Header() {
             </div>
             <nav className="flex-1 px-2 py-4 space-y-2">
               <NavItem
-                to="/"
+                to="/startDebate"
                 label="Home"
                 icon={<Home className="mr-3 h-4 w-4" />}
                 onClick={toggleDrawer}
@@ -306,7 +322,7 @@ function Header() {
                 onClick={toggleDrawer}
               />
               <NavItem
-                to="/support-os"
+                to="/support-debateai"
                 label="Support DebateAI"
                 icon={<Heart className="mr-3 h-4 w-4 text-red-500 transition-all duration-300 group-hover:fill-red-500 group-hover:scale-110" />}
                 onClick={toggleDrawer}
@@ -326,6 +342,10 @@ interface NavItemProps {
   onClick?: () => void;
 }
 
+/**
+ * Individual navigation item for the mobile drawer.
+ * @param {NavItemProps} props - Component props.
+ */
 function NavItem({ to, label, icon, onClick }: NavItemProps) {
   return (
     <NavLink
