@@ -142,7 +142,11 @@ function Header() {
         <div className="flex items-center gap-4">
           <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
             <PopoverTrigger asChild>
-              <button className="relative focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full p-1 transition-colors">
+              <button
+                type="button"
+                aria-label="Open notifications"
+                className="relative focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full p-1 transition-colors"
+              >
                 <Bell className="w-5 h-5 text-muted-foreground hover:text-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-destructive" />
@@ -177,9 +181,11 @@ function Header() {
                         onClick={() => handleNotificationClick(notification)}
                       >
                         <button
+                          type="button"
                           onClick={(e) => handleDeleteNotification(e, notification.id)}
-                          className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                           title="Delete notification"
+                          aria-label="Delete notification"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -207,7 +213,11 @@ function Header() {
           
           <Popover>
             <PopoverTrigger asChild>
-              <button className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full transition-opacity">
+              <button
+                type="button"
+                aria-label="Open user menu"
+                className="focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full transition-opacity"
+              >
                 <img
                   src={user?.avatarUrl || avatarImage}
                   alt="User avatar"
