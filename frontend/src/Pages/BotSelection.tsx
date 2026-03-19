@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -22,6 +22,7 @@ interface Bot {
   avatar: string;
   quote: string;
   rating: number;
+  specialMessage: string;
 }
 
 // Bot definitions
@@ -34,6 +35,7 @@ const allBots: Bot[] = [
     avatar: "/images/rookie_rick.jpg",
     quote: "Uh, wait, what's your point again?",
     rating: 1200,
+    specialMessage: "Get ready for a charming, underdog performance!",
   },
   {
     name: "Casual Casey",
@@ -42,6 +44,7 @@ const allBots: Bot[] = [
     avatar: "/images/casual_casey.jpg",
     quote: "Let's just chill and chat, okay?",
     rating: 1300,
+    specialMessage: "Relax and enjoy the laid-back debate vibe!",
   },
   {
     name: "Moderate Mike",
@@ -50,6 +53,7 @@ const allBots: Bot[] = [
     avatar: "/images/moderate_mike.jpg",
     quote: "I see your side, but here's mine.",
     rating: 1500,
+    specialMessage: "A balanced challenge awaits you!",
   },
   {
     name: "Sassy Sarah",
@@ -58,6 +62,7 @@ const allBots: Bot[] = [
     avatar: "/images/sassy_sarah.jpg",
     quote: "Oh honey, you're in for it now!",
     rating: 1600,
+    specialMessage: "Prepare for sass and a bit of spice in the debate!",
   },
   {
     name: "Innovative Iris",
@@ -66,6 +71,7 @@ const allBots: Bot[] = [
     avatar: "/images/innovative_iris.jpg",
     quote: "Fresh ideas fuel productive debates.",
     rating: 1550,
+    specialMessage: "Expect creative insights and fresh ideas!",
   },
   {
     name: "Tough Tony",
@@ -74,6 +80,7 @@ const allBots: Bot[] = [
     avatar: "/images/tough_tony.jpg",
     quote: "Prove it or step aside.",
     rating: 1700,
+    specialMessage: "Brace yourself for a no-nonsense, hard-hitting debate!",
   },
   {
     name: "Expert Emma",
@@ -82,6 +89,7 @@ const allBots: Bot[] = [
     avatar: "/images/expert_emma.jpg",
     quote: "Facts don't care about your feelings.",
     rating: 1800,
+    specialMessage: "Expert-level debate incoming – sharpen your wit!",
   },
   {
     name: "Grand Greg",
@@ -90,6 +98,7 @@ const allBots: Bot[] = [
     avatar: "/images/grand_greg.jpg",
     quote: "Checkmate. Your move.",
     rating: 2000,
+    specialMessage: "A legendary showdown is about to begin!",
   },
   // Cinematic bots
   {
@@ -100,6 +109,7 @@ const allBots: Bot[] = [
     quote:
       "Hmm, strong your point is. But ask yourself, does the tree fall because it wills, or because the wind commands?",
     rating: 2400,
+    specialMessage: "Prepare for wisdom wrapped in riddles!",
   },
   {
     name: "Tony Stark",
@@ -109,6 +119,7 @@ const allBots: Bot[] = [
     quote:
       "Nice try, but your logic's running on fumes. Step aside, I'll show you how a genius does it.",
     rating: 2200,
+    specialMessage: "Get ready for sharp wit and genius banter!",
   },
   {
     name: "Professor Dumbledore",
@@ -118,6 +129,7 @@ const allBots: Bot[] = [
     quote:
       "A valid point, but have you considered its ripple effects? Let us explore the deeper truth.",
     rating: 2500,
+    specialMessage: "A strategic and insightful debate awaits!",
   },
   {
     name: "Rafiki",
@@ -127,6 +139,7 @@ const allBots: Bot[] = [
     quote:
       "Haha! You think too hard, my friend! The answer's right there, like a monkey on a branch!",
     rating: 1800,
+    specialMessage: "Expect laughter and surprising wisdom!",
   },
   {
     name: "Darth Vader",
@@ -136,6 +149,7 @@ const allBots: Bot[] = [
     quote:
       "Your reasoning falters. Submit to the strength of my argument, or be crushed.",
     rating: 2300,
+    specialMessage: "Brace for an intense, commanding debate!",
   },
 ];
 
@@ -155,6 +169,9 @@ const defaultPhaseTimings: { name: string; time: number }[] = [
   { name: "Closing Statements", time: 180 },
 ];
 
+// Maximum length for custom topics
+const MAX_TOPIC_LENGTH = 200;
+
 // Loader component
 const Loader: React.FC = () => (
   <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
@@ -168,52 +185,85 @@ const Loader: React.FC = () => (
   </div>
 );
 
-// Returns a custom special message for each bot
-const getBotSpecialMessage = (botName: string): string => {
-  switch (botName) {
-    case "Rookie Rick":
-      return "Get ready for a charming, underdog performance!";
-    case "Casual Casey":
-      return "Relax and enjoy the laid-back debate vibe!";
-    case "Moderate Mike":
-      return "A balanced challenge awaits you!";
-    case "Sassy Sarah":
-      return "Prepare for sass and a bit of spice in the debate!";
-    case "Innovative Iris":
-      return "Expect creative insights and fresh ideas!";
-    case "Tough Tony":
-      return "Brace yourself for a no-nonsense, hard-hitting debate!";
-    case "Expert Emma":
-      return "Expert-level debate incoming – sharpen your wit!";
-    case "Grand Greg":
-      return "A legendary showdown is about to begin!";
-    case "Yoda":
-      return "Prepare for wisdom wrapped in riddles!";
-    case "Tony Stark":
-      return "Get ready for sharp wit and genius banter!";
-    case "Professor Dumbledore":
-      return "A strategic and insightful debate awaits!";
-    case "Rafiki":
-      return "Expect laughter and surprising wisdom!";
-    case "Darth Vader":
-      return "Brace for an intense, commanding debate!";
-    default:
-      return "";
-  }
-};
+const isValidPhaseTimings = (
+  value: unknown
+): value is { name: string; time: number }[] =>
+  Array.isArray(value) &&
+  value.every(
+    (p) =>
+      p &&
+      typeof p === "object" &&
+      typeof (p as { name?: unknown }).name === "string" &&
+      Number.isFinite((p as { time?: unknown }).time)
+  );
 
 const BotSelection: React.FC = () => {
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
   const [topic, setTopic] = useState<string>("custom");
   const [customTopic, setCustomTopic] = useState<string>("");
   const [stance, setStance] = useState<string>("random");
-  const [phaseTimings, setPhaseTimings] =
-    useState<{ name: string; time: number }[]>(defaultPhaseTimings);
+  const [phaseTimings, setPhaseTimings] = useState<{ name: string; time: number }[]>(
+    () => defaultPhaseTimings.map((p) => ({ ...p }))
+  );
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
   const [user] = useAtom(userAtom);
-  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    bot?: string;
+    topic?: string;
+    timings?: string;
+  }>({});
   const [expandedLevel, setExpandedLevel] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipInitialPersistRef = useRef(true);
+  const preventPersistRef = useRef(false);
+
+  useEffect(() => {
+    const savedState = localStorage.getItem('botSelectionState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setSelectedBot(typeof parsed.selectedBot === "string" ? parsed.selectedBot : null);
+        setTopic(typeof parsed.topic === "string" ? parsed.topic : "custom");
+        setCustomTopic(typeof parsed.customTopic === "string" ? parsed.customTopic : "");
+        setStance(typeof parsed.stance === "string" ? parsed.stance : "random");
+        setPhaseTimings(
+          isValidPhaseTimings(parsed.phaseTimings)
+            ? parsed.phaseTimings.map((p: any) => ({ ...p }))
+            : defaultPhaseTimings.map((p) => ({ ...p }))
+        );
+      } catch (error) {
+        console.error('Failed to load saved state:', error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (skipInitialPersistRef.current) {
+      skipInitialPersistRef.current = false;
+      return;
+    }
+    if (preventPersistRef.current) return;
+    const stateToSave = {
+      selectedBot,
+      topic,
+      customTopic,
+      stance,
+      phaseTimings,
+    };
+    localStorage.setItem('botSelectionState', JSON.stringify(stateToSave));
+  }, [selectedBot, topic, customTopic, stance, phaseTimings]);
+
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) {
+        clearTimeout(navTimerRef.current);
+      }
+      setShowSuccess(false);
+    };
+  }, []);
 
   const effectiveTopic = topic === "custom" ? customTopic : topic;
   const selectedBotObj = selectedBot
@@ -222,10 +272,6 @@ const BotSelection: React.FC = () => {
 
   // Difficulty levels with counts, sorted by difficulty
   const levels = [
-    {
-      name: "Legends",
-      count: allBots.filter((bot) => bot.level === "Legends").length,
-    },
     {
       name: "Easy",
       count: allBots.filter((bot) => bot.level === "Easy").length,
@@ -242,17 +288,24 @@ const BotSelection: React.FC = () => {
       name: "Expert",
       count: allBots.filter((bot) => bot.level === "Expert").length,
     },
+    {
+      name: "Legends",
+      count: allBots.filter((bot) => bot.level === "Legends").length,
+    },
   ].filter((level) => level.count > 0);
 
   // Update phase timing ensuring the value is within the allowed range
   const updatePhaseTiming = (phaseIndex: number, value: string) => {
-    const newTimings = [...phaseTimings];
-    const parsedValue = parseInt(value, 10);
-    const timeInSeconds = isNaN(parsedValue)
-      ? phaseTimings[phaseIndex].time
-      : Math.max(60, Math.min(600, parsedValue));
-    newTimings[phaseIndex].time = timeInSeconds;
-    setPhaseTimings(newTimings);
+    // Allow typing freely; validation happens on submit or via inline warnings
+    const parsedValue = value === "" ? 0 : parseInt(value, 10);
+    const timeInSeconds = isNaN(parsedValue) ? 0 : parsedValue;
+
+    setPhaseTimings((prev) =>
+      prev.map((phase, idx) =>
+        idx === phaseIndex ? { ...phase, time: timeInSeconds } : phase
+      )
+    );
+    if (fieldErrors.timings) setFieldErrors((prev) => ({ ...prev, timings: undefined }));
   };
 
   const toggleLevel = (level: string) => {
@@ -260,14 +313,35 @@ const BotSelection: React.FC = () => {
   };
 
   const startDebate = async () => {
-    if (!selectedBot || !effectiveTopic) {
-      setError("Please select a bot and a topic");
-      return;
+    if (isLoading || isCreating) return;
+    const newErrors: typeof fieldErrors = {};
+    let isValid = true;
+
+    if (!selectedBot) {
+      newErrors.bot = "Please select a bot";
+      isValid = false;
     }
+
+    if (!effectiveTopic.trim()) {
+      newErrors.topic = "Please select or enter a topic";
+      isValid = false;
+    } else if (effectiveTopic.trim().length > MAX_TOPIC_LENGTH) {
+      newErrors.topic = `Topic must be ${MAX_TOPIC_LENGTH} characters or fewer`;
+      isValid = false;
+    }
+
+    const invalidTiming = phaseTimings.some((p) => p.time < 60 || p.time > 600);
+    if (invalidTiming) {
+      newErrors.timings = "Phases must be between 60s and 600s";
+      isValid = false;
+    }
+
+    setFieldErrors(newErrors);
+    if (!isValid) return;
 
     const bot = allBots.find((b) => b.name === selectedBot);
     if (!bot) {
-      setError("Selected bot not found");
+      setFieldErrors({ bot: "Selected bot not found" });
       return;
     }
 
@@ -278,7 +352,7 @@ const BotSelection: React.FC = () => {
     const debatePayload = {
       botName: bot.name,
       botLevel: bot.level,
-      topic: effectiveTopic,
+      topic: effectiveTopic.trim(),
       stance: finalStance,
       history: [],
       phaseTimings,
@@ -286,7 +360,11 @@ const BotSelection: React.FC = () => {
 
     try {
       setIsLoading(true);
+      setIsCreating(true);
       const data = await createDebate(debatePayload);
+      setShowSuccess(true);
+      localStorage.removeItem('botSelectionState');
+      preventPersistRef.current = true;
       const state = {
         ...data,
         phaseTimings,
@@ -294,11 +372,17 @@ const BotSelection: React.FC = () => {
         userId: user?.email || "guest@example.com",
         botName: bot.name,
         botLevel: bot.level,
-        topic: effectiveTopic,
+        topic: effectiveTopic.trim(),
       };
-      navigate(`/debate/${data.debateId}`, { state });
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
+        navigate(`/debate/${data.debateId}`, { state });
+        setIsCreating(false);
+      }, 1500);
     } catch (error) {
-      setError("Failed to start debate");
+      setFieldErrors({ bot: "Failed to start debate. Please try again." });
+      setShowSuccess(false);
+      setIsCreating(false);
     } finally {
       setIsLoading(false);
     }
@@ -307,6 +391,16 @@ const BotSelection: React.FC = () => {
   return (
     <>
       {isLoading && <Loader />}
+      {showSuccess && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse"
+        >
+          Debate created successfully! Topic: "{effectiveTopic}"
+        </div>
+      )}
       <div className="bg-gradient-to-br from-background via-accent/10 to-background p-4">
         {/* Header Section */}
         <div className="text-center mb-6">
@@ -316,7 +410,6 @@ const BotSelection: React.FC = () => {
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Select a bot and set up your debate challenge.
           </p>
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         </div>
 
         {/* Main Content Grid */}
@@ -326,6 +419,7 @@ const BotSelection: React.FC = () => {
             <h2 className="text-xl font-light text-foreground mb-4">
               Pick Your <span className="text-primary">Bot</span>
             </h2>
+            {fieldErrors.bot && <p className="text-red-500 text-sm mb-2">{fieldErrors.bot}</p>}
 
             {/* Selected Bot Preview */}
             {selectedBotObj && (
@@ -396,7 +490,20 @@ const BotSelection: React.FC = () => {
                         .map((bot) => (
                           <div
                             key={bot.name}
-                            onClick={() => setSelectedBot(bot.name)}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={selectedBot === bot.name}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedBot(bot.name);
+                                setFieldErrors((prev) => ({ ...prev, bot: undefined }));
+                              }
+                            }}
+                            onClick={() => {
+                              setSelectedBot(bot.name);
+                              setFieldErrors((prev) => ({ ...prev, bot: undefined }));
+                            }}
                             className={`relative flex flex-col items-center p-2 rounded-md border transition-colors cursor-pointer group ${
                               selectedBot === bot.name
                                 ? "border-2 border-primary bg-primary/10"
@@ -411,7 +518,7 @@ const BotSelection: React.FC = () => {
                               />
                             </div>
                             {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-md">
+                            <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 rounded-md">
                               <h3 className="text-sm font-medium text-white text-center">
                                 {bot.name}
                               </h3>
@@ -435,9 +542,9 @@ const BotSelection: React.FC = () => {
               <p className="text-sm text-muted-foreground">
                 Configure your topic, stance, and phase timings.
               </p>
-              {selectedBot && (
+              {selectedBotObj && selectedBotObj.specialMessage && (
                 <div className="mt-2 p-2 bg-card border border-border rounded-md text-foreground text-sm font-medium">
-                  {getBotSpecialMessage(selectedBot)}
+                  {selectedBotObj.specialMessage}
                 </div>
               )}
             </div>
@@ -449,7 +556,10 @@ const BotSelection: React.FC = () => {
                   <label className="block text-sm text-muted-foreground mb-1">
                     Debate Topic
                   </label>
-                  <Select onValueChange={setTopic} defaultValue="custom">
+                  <Select value={topic} onValueChange={(val) => {
+                    setTopic(val);
+                    setFieldErrors((prev) => ({ ...prev, topic: undefined }));
+                  }}>
                     <SelectTrigger className="w-full bg-background text-foreground border-border">
                       <SelectValue placeholder="Select a topic" />
                     </SelectTrigger>
@@ -465,13 +575,16 @@ const BotSelection: React.FC = () => {
                   {topic === "custom" && (
                     <Input
                       value={customTopic}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setCustomTopic(e.target.value)
-                      }
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setCustomTopic(e.target.value);
+                        setFieldErrors((prev) => ({ ...prev, topic: undefined }));
+                      }}
+                      maxLength={MAX_TOPIC_LENGTH}
                       placeholder="Enter your custom topic"
                       className="mt-2 bg-background text-foreground border-border"
                     />
                   )}
+                  {fieldErrors.topic && <p className="text-red-500 text-xs mt-1">{fieldErrors.topic}</p>}
                 </div>
 
                 {/* Stance Selection */}
@@ -479,7 +592,7 @@ const BotSelection: React.FC = () => {
                   <label className="block text-sm text-muted-foreground mb-1">
                     Your Stance
                   </label>
-                  <Select onValueChange={setStance} defaultValue="random">
+                  <Select value={stance} onValueChange={setStance}>
                     <SelectTrigger className="w-full bg-background text-foreground border-border">
                       <SelectValue placeholder="Choose your stance" />
                     </SelectTrigger>
@@ -497,6 +610,7 @@ const BotSelection: React.FC = () => {
                 <label className="block text-sm text-muted-foreground mb-2">
                   Phase Timings (seconds)
                 </label>
+                {fieldErrors.timings && <p className="text-red-500 text-xs mb-2">{fieldErrors.timings}</p>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {phaseTimings.map((phase, index) => (
                     <div
@@ -513,9 +627,10 @@ const BotSelection: React.FC = () => {
                           updatePhaseTiming(index, e.target.value)
                         }
                         className="text-xs bg-background text-foreground border-border"
-                        min="60"
-                        max="600"
                       />
+                      {(phase.time < 60 || phase.time > 600) && (
+                        <span className="text-[10px] text-red-500 mt-1">Min 60s, Max 600s</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -523,10 +638,17 @@ const BotSelection: React.FC = () => {
 
               <Button
                 onClick={startDebate}
-                disabled={!selectedBot || !effectiveTopic || isLoading}
+                disabled={
+                  isLoading ||
+                  isCreating ||
+                  !selectedBot ||
+                  !effectiveTopic.trim() ||
+                  effectiveTopic.trim().length > MAX_TOPIC_LENGTH ||
+                  phaseTimings.some((p) => p.time < 60 || p.time > 600)
+                }
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-md transition-colors shadow-md"
               >
-                Start Debate 🚀
+                {isLoading || isCreating ? 'Creating Debate...' : 'Start Debate 🚀'}
               </Button>
             </div>
           </div>
