@@ -290,29 +290,14 @@ const player2RatingSummary =
       closing: getScoreAndReason('closing', 'player1').score,
     };
     const player1Reasons = {
-      opening: getScoreAndReason(
-        'opening_statement',
-        'player1'
-      ).reason?.toLowerCase?.() ?? String(getScoreAndReason('opening_statement', 'player1').reason || '').toLowerCase(),
+      opening: getScoreAndReason('opening_statement', 'player1').reason.toLowerCase(),
       cross_questions: isUserBotFormat
-        ? (getScoreAndReason('cross_examination', 'player1').reason?.toLowerCase?.() ??
-            String(getScoreAndReason('cross_examination', 'player1').reason || '').toLowerCase())
-        : getScoreAndReason(
-            'cross_examination_questions',
-            'player1'
-          ).reason?.toLowerCase?.() ??
-          String(getScoreAndReason('cross_examination_questions', 'player1').reason || '').toLowerCase(),
+        ? getScoreAndReason('cross_examination', 'player1').reason.toLowerCase()
+        : getScoreAndReason('cross_examination_questions', 'player1').reason.toLowerCase(),
       cross_answers: isUserBotFormat
-        ? (getScoreAndReason('answers', 'player1').reason?.toLowerCase?.() ??
-            String(getScoreAndReason('answers', 'player1').reason || '').toLowerCase())
-        : getScoreAndReason(
-            'cross_examination_answers',
-            'player1'
-          ).reason?.toLowerCase?.() ??
-          String(getScoreAndReason('cross_examination_answers', 'player1').reason || '').toLowerCase(),
-      closing:
-        getScoreAndReason('closing', 'player1').reason?.toLowerCase?.() ??
-        String(getScoreAndReason('closing', 'player1').reason || '').toLowerCase(),
+      ? getScoreAndReason('answers', 'player1').reason.toLowerCase()
+        : getScoreAndReason('cross_examination_answers', 'player1').reason.toLowerCase(),
+      closing: getScoreAndReason('closing', 'player1').reason.toLowerCase(),
     };
 
     // Strengthen Argument: Low scores in opening/closing or weak argument-related feedback
